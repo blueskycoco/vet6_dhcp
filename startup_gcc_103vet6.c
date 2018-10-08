@@ -41,10 +41,7 @@ static void DebugMon_Handler(void);
 // External declaration for the interrupt handler used by the application.
 //
 //*****************************************************************************
-extern void EXTI15_10_IRQHandler(void);
-extern void RTCAlarm_IRQHandler(void);
-extern void EXTI9_5_IRQHandler(void);
-extern void CAN1_RX0_IRQHandler(void);
+extern void EXTI2_IRQHandler(void);
 //*****************************************************************************
 //
 // The entry point for the application.
@@ -58,7 +55,7 @@ extern int main(void);
 //
 //*****************************************************************************
 static uint32_t pui32Stack[1024];
-#define BootRAM ((void *)(0xF108F85F))
+#define BootRAM ((void *)(0xF1e0F85F))
 //*****************************************************************************
 //
 // The vector table.  Note that the proper constructs must be placed on this to
@@ -83,51 +80,105 @@ void (* const g_pfnVectors[])(void) =
 	SVC_Handler,                      		// SVCall handler
 	DebugMon_Handler,                      	// Debug monitor handler
 	0,                                      // Reserved
-	 IntDefaultHandler,    //	PendSV_Handler
-	 IntDefaultHandler,    //	SysTick_Handler
-	 IntDefaultHandler,    //	WWDG_IRQHandler
-	 IntDefaultHandler,    //	PVD_IRQHandler
-	 IntDefaultHandler,    //	TAMPER_IRQHandler
-	 IntDefaultHandler,    //	RTC_IRQHandler
-	 IntDefaultHandler,    //	FLASH_IRQHandler
-	 IntDefaultHandler,    //	RCC_IRQHandler
-	 IntDefaultHandler,    //	EXTI0_IRQHandler
-	 IntDefaultHandler,    //	EXTI1_IRQHandler
-	 IntDefaultHandler,    //	EXTI2_IRQHandler
-	 IntDefaultHandler,    //	EXTI3_IRQHandler
-	 IntDefaultHandler,    //	EXTI4_IRQHandler
-	 IntDefaultHandler,    //	DMA1_Channel1_IRQHandler
-	 IntDefaultHandler,    //	DMA1_Channel2_IRQHandler
-	 IntDefaultHandler,    //	DMA1_Channel3_IRQHandler
-	 IntDefaultHandler,    //	DMA1_Channel4_IRQHandler
-	 IntDefaultHandler,    //	DMA1_Channel5_IRQHandler
-	 IntDefaultHandler,    //	DMA1_Channel6_IRQHandler
-	 IntDefaultHandler,    //	DMA1_Channel7_IRQHandler
-	 IntDefaultHandler,    //	ADC1_2_IRQHandler
-	 IntDefaultHandler,    //	USB_HP_CAN1_TX_IRQHandler
-	 IntDefaultHandler,    //	USB_LP_CAN1_RX0_IRQHandler
-	 IntDefaultHandler,    //	CAN1_RX1_IRQHandler
-	 IntDefaultHandler,    //	CAN1_SCE_IRQHandler
-	 IntDefaultHandler,    //	EXTI9_5_IRQHandler
-	 IntDefaultHandler,    //	TIM1_BRK_IRQHandler
-	 IntDefaultHandler,    //	TIM1_UP_IRQHandler
-	 IntDefaultHandler,    //	TIM1_TRG_COM_IRQHandler
-	 IntDefaultHandler,    //	TIM1_CC_IRQHandler
-	 IntDefaultHandler,    //	TIM2_IRQHandler
-	 IntDefaultHandler,    //	TIM3_IRQHandler
-	 IntDefaultHandler,    //	TIM4_IRQHandler
-	 IntDefaultHandler,    //	I2C1_EV_IRQHandler
-	 IntDefaultHandler,    //	I2C1_ER_IRQHandler
-	 IntDefaultHandler,    //	I2C2_EV_IRQHandler
-	 IntDefaultHandler,    //	I2C2_ER_IRQHandler
-	 IntDefaultHandler,    //	SPI1_IRQHandler
-	 IntDefaultHandler,    //	SPI2_IRQHandler
-	 IntDefaultHandler,    //	USART1_IRQHandler
-	 IntDefaultHandler,    //	USART2_IRQHandler
-	 IntDefaultHandler,    //	USART3_IRQHandler
-	 IntDefaultHandler,    //	EXTI15_10_IRQHandler
-	 IntDefaultHandler,    //	RTCAlarm_IRQHandler
-	 IntDefaultHandler,    //	USBWakeUp_IRQHandler	
+	IntDefaultHandler,    //	PendSV_Handler
+	IntDefaultHandler,    //	SysTick_Handler
+	IntDefaultHandler,    //	WWDG_IRQHandler
+	IntDefaultHandler,    //	PVD_IRQHandler
+	IntDefaultHandler,    //	TAMPER_IRQHandler
+	IntDefaultHandler,    //	RTC_IRQHandler
+	IntDefaultHandler,    //	FLASH_IRQHandler
+	IntDefaultHandler,    //	RCC_IRQHandler
+	IntDefaultHandler,    //	EXTI0_IRQHandler
+	IntDefaultHandler,    //	EXTI1_IRQHandler
+	EXTI2_IRQHandler,     //	EXTI2_IRQHandler
+	IntDefaultHandler,    //	EXTI3_IRQHandler
+	IntDefaultHandler,    //	EXTI4_IRQHandler
+	IntDefaultHandler,    //	DMA1_Channel1_IRQHandler
+	IntDefaultHandler,    //	DMA1_Channel2_IRQHandler
+	IntDefaultHandler,    //	DMA1_Channel3_IRQHandler
+	IntDefaultHandler,    //	DMA1_Channel4_IRQHandler
+	IntDefaultHandler,    //	DMA1_Channel5_IRQHandler
+	IntDefaultHandler,    //	DMA1_Channel6_IRQHandler
+	IntDefaultHandler,    //	DMA1_Channel7_IRQHandler
+	IntDefaultHandler,    //	ADC1_2_IRQHandler
+	IntDefaultHandler,    //	USB_HP_CAN1_TX_IRQHandler
+	IntDefaultHandler,    //	USB_LP_CAN1_RX0_IRQHandler
+	IntDefaultHandler,    //	CAN1_RX1_IRQHandler
+	IntDefaultHandler,    //	CAN1_SCE_IRQHandler
+	IntDefaultHandler,    //	EXTI9_5_IRQHandler
+	IntDefaultHandler,    //	TIM1_BRK_IRQHandler
+	IntDefaultHandler,    //	TIM1_UP_IRQHandler
+	IntDefaultHandler,    //	TIM1_TRG_COM_IRQHandler
+	IntDefaultHandler,    //	TIM1_CC_IRQHandler
+	IntDefaultHandler,    //	TIM2_IRQHandler
+	IntDefaultHandler,    //	TIM3_IRQHandler
+	IntDefaultHandler,    //	TIM4_IRQHandler
+	IntDefaultHandler,    //	I2C1_EV_IRQHandler
+	IntDefaultHandler,    //	I2C1_ER_IRQHandler
+	IntDefaultHandler,    //	I2C2_EV_IRQHandler
+	IntDefaultHandler,    //	I2C2_ER_IRQHandler
+	IntDefaultHandler,    //	SPI1_IRQHandler
+	IntDefaultHandler,    //	SPI2_IRQHandler
+	IntDefaultHandler,    //	USART1_IRQHandler
+	IntDefaultHandler,    //	USART2_IRQHandler
+	IntDefaultHandler,    //	USART3_IRQHandler
+	IntDefaultHandler,    //	EXTI15_10_IRQHandler
+	IntDefaultHandler,    //	RTCAlarm_IRQHandler
+	IntDefaultHandler,    //	USBWakeUp_IRQHandler	
+	IntDefaultHandler,    //    TIM8_BRK_IRQHandler
+	IntDefaultHandler,    //    TIM8_UP_IRQHandler
+	IntDefaultHandler,    //    TIM8_TRG_COM_IRQHandler
+	IntDefaultHandler,    //    TIM8_CC_IRQHandler
+	IntDefaultHandler,    //    ADC3_IRQHandler
+	IntDefaultHandler,    //    FSMC_IRQHandler
+	IntDefaultHandler,    //    SDIO_IRQHandler
+	IntDefaultHandler,    //    TIM5_IRQHandler
+	IntDefaultHandler,    //    SPI3_IRQHandler
+	IntDefaultHandler,    //    UART4_IRQHandler
+	IntDefaultHandler,    //    UART5_IRQHandler
+	IntDefaultHandler,    //    TIM6_IRQHandler
+	IntDefaultHandler,    //    TIM7_IRQHandler
+	IntDefaultHandler,    //    DMA2_Channel1_IRQHandler
+	IntDefaultHandler,    //    DMA2_Channel2_IRQHandler
+	IntDefaultHandler,    //    DMA2_Channel3_IRQHandler
+	IntDefaultHandler,    //    DMA2_Channel4_5_IRQHandler
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
+	0,
 	0,
 	0,
 	0,
@@ -164,9 +215,9 @@ extern uint32_t _ebss;
 	void
 Reset_Handler(void)
 {
-	
+
 	uint32_t *pui32Src, *pui32Dest;
-	
+
 	//
 	// Copy the data segment initializers from flash to SRAM.
 	//

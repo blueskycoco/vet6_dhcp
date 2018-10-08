@@ -58,7 +58,7 @@ ${COMPILER}:
 #
 # Rules for building the w5500 example.
 #
-${COMPILER}/w5500.axf: ${COMPILER}/startup_${COMPILER}_103c8t6.o
+${COMPILER}/w5500.axf: ${COMPILER}/startup_${COMPILER}_103vet6.o
 ${COMPILER}/w5500.axf: ${COMPILER}/system_stm32f10x.o
 ${COMPILER}/w5500.axf: ${COMPILER}/test_w5500.o
 ${COMPILER}/w5500.axf: ${COMPILER}/syscalls.o
@@ -73,7 +73,7 @@ ${COMPILER}/w5500.axf: w5500.ld
 SCATTERgcc_w5500=w5500.ld
 ENTRY_w5500=Reset_Handler
 #CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_MD -DMASTER
-CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_MD
+CFLAGSgcc=-DUSE_STDPERIPH_DRIVER -DSTM32F10X_HD
 CFLAGSgcc+=-DDEBUG
 #
 # Include the automatically generated dependency files.
