@@ -6,6 +6,7 @@
 #include "mymisc.h"
 #include "wizchip_conf.h"
 #include "dhcp.h"
+#include "socket.h"
 extern void SWO_Enable();
 wiz_NetInfo gWIZNETINFO = {
 	.mac = {0x00, 0x08, 0xdc, 0xab, 0xcd, 0xef},
@@ -22,6 +23,18 @@ uint8_t gDATABUF[DATA_BUF_SIZE];
 
 void EXTI2_IRQHandler(void)
 {
+	intr_kind source; 
+	uint8_t sn_intr;
+	if(EXTI_GetITStatus(EXTI_Line2))
+	{	
+		ctlwizchip(CW_GET_INTERRUPT,&source);
+		ctlwizchip(CW_CLR_INTERRUPT,&source);
+		printf("w5500 intr %x\r\n", source);
+		ctlsocket(SOCK_DHCP, CS_GET_INTERRUPT, &sn_intr);
+		//ctlsocket(SOCK_DHCP, CS_CLR_INTERRUPT, &sn_intr);
+		printf("dhcp ir %x\r\n", sn_intr);
+		EXTI_ClearITPendingBit(EXTI_Line2);
+	}
 }
 
 void spi_init(void)
@@ -32,44 +45,53 @@ void spi_init(void)
 	EXTI_InitTypeDef EXTI_InitStructure;
 
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB |RCC_APB2Periph_GPIOA
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA | RCC_APB2Periph_GPIOB |RCC_APB2Periph_GPIOD
 			|RCC_APB2Periph_AFIO	, ENABLE);
+	GPIO_PinRemapConfig(GPIO_Remap_SWJ_Disable, ENABLE);
+	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable , ENABLE);
 
+	/* w5500 reset, power */
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 | GPIO_Pin_6; 
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+	GPIO_Init(GPIOD, &GPIO_InitStructure);
+	GPIO_SetBits(GPIOD, GPIO_Pin_4);
+	GPIO_ResetBits(GPIOD, GPIO_Pin_6);
+	
+	/* spi cs,mosi,miso,clk */
 	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_3; 
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
 	GPIO_Init(GPIOD, &GPIO_InitStructure);
 	GPIO_SetBits(GPIOD, GPIO_Pin_3);
 
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_4 | GPIO_Pin_3;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_3;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
-
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4 ; 
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
-	GPIO_Init(GPIOD, &GPIO_InitStructure);
-	GPIO_SetBits(GPIOD, GPIO_Pin_4);
-
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
-	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
-	GPIO_Init(GPIOA, &GPIO_InitStructure);
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	GPIO_Init(GPIOB, &GPIO_InitStructure);
 
 	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
 	SPI_InitStructure.SPI_Mode = SPI_Mode_Master;
 	SPI_InitStructure.SPI_DataSize = SPI_DataSize_8b;
-	SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
-	SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
+	SPI_InitStructure.SPI_CPOL = SPI_CPOL_High;
+	SPI_InitStructure.SPI_CPHA = SPI_CPHA_2Edge;
 	SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_4;
+	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
 	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
 	SPI_InitStructure.SPI_CRCPolynomial = 7;
 
 	SPI_Init(SPI3, &SPI_InitStructure);
 	SPI_Cmd(SPI3, ENABLE);
 
+	/* w5500 int */
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
+	GPIO_Init(GPIOA, &GPIO_InitStructure);
 	GPIO_EXTILineConfig(GPIO_PortSourceGPIOA, GPIO_PinSource2);
 	NVIC_InitStructure.NVIC_IRQChannel = EXTI2_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
@@ -96,7 +118,7 @@ void  wizchip_deselect(void)
 uint8_t wizchip_read()
 {
 	while (SPI_I2S_GetFlagStatus(SPI3, SPI_I2S_FLAG_TXE) == RESET);
-	SPI_I2S_SendData(SPI3, 0);
+	SPI_I2S_SendData(SPI3, 0xff);
 	while (SPI_I2S_GetFlagStatus(SPI3, SPI_I2S_FLAG_RXNE) == RESET);
 	return SPI_I2S_ReceiveData(SPI3);
 }
@@ -105,9 +127,13 @@ void  wizchip_write(uint8_t wb)
 {
 	while (SPI_I2S_GetFlagStatus(SPI3, SPI_I2S_FLAG_TXE) == RESET);
 	SPI_I2S_SendData(SPI3, wb);
+	while (SPI_I2S_GetFlagStatus(SPI3, SPI_I2S_FLAG_RXNE) == RESET);
+	SPI_I2S_ReceiveData(SPI3);
 }
 void wizchip_reset(void)
 {
+	GPIO_SetBits(GPIOD, GPIO_Pin_4);
+	delay_ms(160);
 	GPIO_ResetBits(GPIOD, GPIO_Pin_4);
 	delay_ms(5);  
 	GPIO_SetBits(GPIOD, GPIO_Pin_4);
@@ -119,6 +145,7 @@ static uint8_t PHYStatus_Check(void)
 	uint8_t tmp;
 
 	ctlwizchip(CW_GET_PHYLINK, (void*) &tmp);
+	//printf("tmp %x\r\n", tmp);
 	return (tmp == PHY_LINK_OFF) ? 0 : 1;
 }
 void my_ip_assign(void)
@@ -139,6 +166,8 @@ void w5500_init()
 {
 	uint8_t memsize[2][8] = { { 2, 2, 2, 2, 2, 2, 2, 2 }, { 2, 2, 2, 2, 2, 2, 2, 2 } };
 	uint8_t tmpstr[6] = {0};
+	intr_kind intr_source = 0;
+	uint8_t sn_intr = 0;
 	wizchip_reset();
 	reg_wizchip_cs_cbfunc(wizchip_select, wizchip_deselect);
 	reg_wizchip_spi_cbfunc(wizchip_read, wizchip_write);
@@ -146,17 +175,33 @@ void w5500_init()
 		printf("WIZCHIP Initialized fail.\r\n");
 		while (1);
 	}
-
 	ctlnetwork(CN_SET_NETINFO, (void*) &gWIZNETINFO);
 	ctlwizchip(CW_GET_ID,(void*)tmpstr);
 	printf("WIZnet %s EVB - DHCP client \r\n", tmpstr);
 
 	DHCP_init(SOCK_DHCP, gDATABUF);
 	reg_dhcp_cbfunc(my_ip_assign, my_ip_assign, my_ip_conflict);
+#if 1
+	ctlwizchip(CW_GET_INTRMASK,&intr_source);
+	printf("intr %x\r\n", intr_source);
+	intr_source |= IK_SOCK_ALL;
+	ctlwizchip(CW_SET_INTRMASK,&intr_source);
+	ctlwizchip(CW_GET_INTRMASK,&intr_source);
+	printf("new intr %x\r\n", intr_source);
+	ctlsocket(SOCK_DHCP, CS_SET_INTMASK, &sn_intr);
+	ctlsocket(SOCK_DHCP, CS_GET_INTMASK, &sn_intr);
+	printf("socket sn ir %x\r\n", sn_intr);
+	sn_intr |= 0x1f;
+	ctlsocket(SOCK_DHCP, CS_SET_INTMASK, &sn_intr);
+	ctlsocket(SOCK_DHCP, CS_GET_INTMASK, &sn_intr);
+	printf("new socket sn ir %x\r\n", sn_intr);
+#endif
 }
 void task()
 {
 	uint8_t my_dhcp_retry = 0;
+	uint8_t dhcp_state = 0;
+	uint32_t i = 0;
 	w5500_init();
 	while (1) {
 		if (!PHYStatus_Check()) {
@@ -165,8 +210,10 @@ void task()
 			continue;
 		}
 
-		printf("hi\r\n");
-		switch(DHCP_run())
+		//printf("hi\r\n");
+		dhcp_state = DHCP_run();
+		//printf("dhcp state %d\r\n", dhcp_state);
+		switch(dhcp_state)
 		{
 			case DHCP_IP_ASSIGN:
 			case DHCP_IP_CHANGED:
@@ -189,8 +236,12 @@ void task()
 				break;
 		}
 
-		delay_ms(1000);
-		DHCP_time_handler();
+		delay_ms(1);
+		if (i>1000) {
+			i=0;
+			DHCP_time_handler();
+		}
+		i++;
 	}
 }
 
