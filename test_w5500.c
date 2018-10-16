@@ -21,19 +21,19 @@ wiz_NetInfo gWIZNETINFO = {
 #define DATA_BUF_SIZE   2048
 uint8_t gDATABUF[DATA_BUF_SIZE];
 
-void EXTI0_IRQHandler(void)
+void EXTI9_5_IRQHandler(void)
 {
 	intr_kind source; 
 	uint8_t sn_intr;
-	if(EXTI_GetITStatus(EXTI_Line0))
+	if(EXTI_GetITStatus(EXTI_Line7))
 	{	
 		ctlwizchip(CW_GET_INTERRUPT,&source);
-		ctlwizchip(CW_CLR_INTERRUPT,&source);
 		printf("w5500 intr %x\r\n", source);
 		ctlsocket(SOCK_DHCP, CS_GET_INTERRUPT, &sn_intr);
 		//ctlsocket(SOCK_DHCP, CS_CLR_INTERRUPT, &sn_intr);
 		printf("dhcp ir %x\r\n", sn_intr);
-		EXTI_ClearITPendingBit(EXTI_Line0);
+		ctlwizchip(CW_CLR_INTERRUPT,&source);
+		EXTI_ClearITPendingBit(EXTI_Line7);
 	}
 }
 
@@ -44,30 +44,30 @@ void spi_init(void)
 	NVIC_InitTypeDef NVIC_InitStructure;
 	EXTI_InitTypeDef EXTI_InitStructure;
 
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI3, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_SPI2, ENABLE);
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB|RCC_APB2Periph_AFIO	, ENABLE);
-	GPIO_PinRemapConfig(GPIO_Remap_SWJ_Disable, ENABLE);
-	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable , ENABLE);
+	//GPIO_PinRemapConfig(GPIO_Remap_SWJ_Disable, ENABLE);
+	//GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable , ENABLE);
 
 	/* w5500 reset, power */
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_1;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_6;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
-	GPIO_SetBits(GPIOB, GPIO_Pin_1);
+	GPIO_SetBits(GPIOB, GPIO_Pin_6);
 	
 	/* spi cs,mosi,miso,clk */
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_2; 
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12; 
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
-	GPIO_SetBits(GPIOB, GPIO_Pin_2);
+	GPIO_SetBits(GPIOB, GPIO_Pin_12);
 
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_3;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_15 | GPIO_Pin_13;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AF_PP;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_4;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_14;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IN_FLOATING;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
@@ -82,21 +82,21 @@ void spi_init(void)
 	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
 	SPI_InitStructure.SPI_CRCPolynomial = 7;
 
-	SPI_Init(SPI3, &SPI_InitStructure);
-	SPI_Cmd(SPI3, ENABLE);
+	SPI_Init(SPI2, &SPI_InitStructure);
+	SPI_Cmd(SPI2, ENABLE);
 
 	/* w5500 int */
-	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_7;
 	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_IPU;
 	GPIO_Init(GPIOB, &GPIO_InitStructure);
-	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource0);
-	NVIC_InitStructure.NVIC_IRQChannel = EXTI0_IRQn;
+	GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource7);
+	NVIC_InitStructure.NVIC_IRQChannel = EXTI9_5_IRQn;
 	NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
 	NVIC_InitStructure.NVIC_IRQChannelSubPriority = 1;
 	NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
 	NVIC_Init(&NVIC_InitStructure);
-	EXTI_InitStructure.EXTI_Line = EXTI_Line0;
+	EXTI_InitStructure.EXTI_Line = EXTI_Line7;
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
 	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
@@ -105,46 +105,55 @@ void spi_init(void)
 
 void  wizchip_select(void)
 {
-	GPIO_ResetBits(GPIOB, GPIO_Pin_2); 
+	GPIO_ResetBits(GPIOB, GPIO_Pin_12); 
 }
 
 void  wizchip_deselect(void)
 {
-	GPIO_SetBits(GPIOB, GPIO_Pin_2); 
+	GPIO_SetBits(GPIOB, GPIO_Pin_12); 
 }
 
 uint8_t wizchip_read()
 {
-	while (SPI_I2S_GetFlagStatus(SPI3, SPI_I2S_FLAG_TXE) == RESET);
-	SPI_I2S_SendData(SPI3, 0xff);
-	while (SPI_I2S_GetFlagStatus(SPI3, SPI_I2S_FLAG_RXNE) == RESET);
-	return SPI_I2S_ReceiveData(SPI3);
+	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET);
+	SPI_I2S_SendData(SPI2, 0xff);
+	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_RXNE) == RESET);
+	return SPI_I2S_ReceiveData(SPI2);
 }
 
 void  wizchip_write(uint8_t wb)
 {
-	while (SPI_I2S_GetFlagStatus(SPI3, SPI_I2S_FLAG_TXE) == RESET);
-	SPI_I2S_SendData(SPI3, wb);
-	while (SPI_I2S_GetFlagStatus(SPI3, SPI_I2S_FLAG_RXNE) == RESET);
-	SPI_I2S_ReceiveData(SPI3);
+	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_TXE) == RESET);
+	SPI_I2S_SendData(SPI2, wb);
+	while (SPI_I2S_GetFlagStatus(SPI2, SPI_I2S_FLAG_RXNE) == RESET);
+	SPI_I2S_ReceiveData(SPI2);
 }
 void wizchip_reset(void)
 {
-	GPIO_SetBits(GPIOB, GPIO_Pin_1);
+	GPIO_SetBits(GPIOB, GPIO_Pin_6);
 	delay_ms(160);
-	GPIO_ResetBits(GPIOB, GPIO_Pin_1);
+	GPIO_ResetBits(GPIOB, GPIO_Pin_6);
 	delay_ms(5);  
-	GPIO_SetBits(GPIOB, GPIO_Pin_1);
+	GPIO_SetBits(GPIOB, GPIO_Pin_6);
 	delay_ms(160);
 }
 
 static uint8_t PHYStatus_Check(void)
 {
-	uint8_t tmp;
-
-	ctlwizchip(CW_GET_PHYLINK, (void*) &tmp);
-	//printf("tmp %x\r\n", tmp);
-	return (tmp == PHY_LINK_OFF) ? 0 : 1;
+	uint8_t i = 0;
+	uint8_t cnt[10] = {0};
+	
+	while (i < 10) {
+		ctlwizchip(CW_GET_PHYLINK, (void*)(cnt+i));
+		//printf("cnt[%d] = %x\r\n", i, cnt[i]);
+		delay_ms(100);
+		i++;
+	}
+	
+	for (i=0; i<10; i++)
+		if (cnt[i] == PHY_LINK_OFF)
+			return 0;
+	return 1;
 }
 void my_ip_assign(void)
 {
@@ -181,6 +190,7 @@ void w5500_init()
 	uint8_t tmpstr[6] = {0};
 	intr_kind intr_source = 0;
 	uint8_t sn_intr = 0;
+	printf("w5500 init\r\n");
 	wizchip_reset();
 	reg_wizchip_cs_cbfunc(wizchip_select, wizchip_deselect);
 	reg_wizchip_spi_cbfunc(wizchip_read, wizchip_write);
@@ -263,6 +273,7 @@ int main(void)
 	delay_init(72);
 	SWO_Enable();
 	Debug_uart_Init();
+	delay_ms(15000);
 	spi_init();
 	task();
 }

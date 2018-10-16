@@ -404,7 +404,6 @@ void send_DHCP_DISCOVER(void)
 	ip[3] = 255;
 
 #ifdef _DHCP_DEBUG_
-	df
 	printf("> Send DHCP_DISCOVER\r\n");
 #endif
 

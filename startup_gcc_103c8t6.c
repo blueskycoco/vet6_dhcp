@@ -41,7 +41,7 @@ static void DebugMon_Handler(void);
 // External declaration for the interrupt handler used by the application.
 //
 //*****************************************************************************
-extern void EXTI0_IRQHandler(void);
+extern void EXTI9_5_IRQHandler(void);
 //*****************************************************************************
 //
 // The entry point for the application.
@@ -88,7 +88,7 @@ void (* const g_pfnVectors[])(void) =
 	IntDefaultHandler,    //	RTC_IRQHandler
 	IntDefaultHandler,    //	FLASH_IRQHandler
 	IntDefaultHandler,    //	RCC_IRQHandler
-	EXTI0_IRQHandler,     //	EXTI0_IRQHandler
+	IntDefaultHandler,     //	EXTI0_IRQHandler
 	IntDefaultHandler,    //	EXTI1_IRQHandler
 	IntDefaultHandler,    //	EXTI2_IRQHandler
 	IntDefaultHandler,    //	EXTI3_IRQHandler
@@ -105,7 +105,7 @@ void (* const g_pfnVectors[])(void) =
 	IntDefaultHandler,    //	USB_LP_CAN1_RX0_IRQHandler
 	IntDefaultHandler,    //	CAN1_RX1_IRQHandler
 	IntDefaultHandler,    //	CAN1_SCE_IRQHandler
-	IntDefaultHandler,    //	EXTI9_5_IRQHandler
+	EXTI9_5_IRQHandler,    //	EXTI9_5_IRQHandler
 	IntDefaultHandler,    //	TIM1_BRK_IRQHandler
 	IntDefaultHandler,    //	TIM1_UP_IRQHandler
 	IntDefaultHandler,    //	TIM1_TRG_COM_IRQHandler
