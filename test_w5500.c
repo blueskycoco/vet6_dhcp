@@ -157,6 +157,21 @@ void my_ip_assign(void)
 	gWIZNETINFO.dhcp = NETINFO_DHCP;
 	ctlnetwork(CN_SET_NETINFO, (void*) &gWIZNETINFO);
 	printf("ip assigned\r\n");
+	printf("ip %d.%d.%d.%d\r\n",
+			gWIZNETINFO.ip[0],
+			gWIZNETINFO.ip[1],
+			gWIZNETINFO.ip[2],
+			gWIZNETINFO.ip[3]);
+	printf("gw %d.%d.%d.%d\r\n",
+			gWIZNETINFO.gw[0],
+			gWIZNETINFO.gw[1],
+			gWIZNETINFO.gw[2],
+			gWIZNETINFO.gw[3]);
+	printf("dns %d.%d.%d.%d\r\n",
+			gWIZNETINFO.dns[0],
+			gWIZNETINFO.dns[1],
+			gWIZNETINFO.dns[2],
+			gWIZNETINFO.dns[3]);
 }
 void my_ip_conflict(void)
 {
@@ -219,7 +234,7 @@ void task()
 			case DHCP_IP_CHANGED:
 				break;
 			case DHCP_IP_LEASED:
-				printf("IP got\r\n");
+				//printf("IP got\r\n");
 				break;
 			case DHCP_FAILED:
 				my_dhcp_retry++;
