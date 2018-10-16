@@ -41,7 +41,7 @@ static void DebugMon_Handler(void);
 // External declaration for the interrupt handler used by the application.
 //
 //*****************************************************************************
-extern void EXTI2_IRQHandler(void);
+extern void EXTI0_IRQHandler(void);
 //*****************************************************************************
 //
 // The entry point for the application.
@@ -55,7 +55,7 @@ extern int main(void);
 //
 //*****************************************************************************
 static uint32_t pui32Stack[1024];
-#define BootRAM ((void *)(0xF1e0F85F))
+#define BootRAM ((void *)(0xF108F85F))
 //*****************************************************************************
 //
 // The vector table.  Note that the proper constructs must be placed on this to
@@ -88,9 +88,9 @@ void (* const g_pfnVectors[])(void) =
 	IntDefaultHandler,    //	RTC_IRQHandler
 	IntDefaultHandler,    //	FLASH_IRQHandler
 	IntDefaultHandler,    //	RCC_IRQHandler
-	IntDefaultHandler,    //	EXTI0_IRQHandler
+	EXTI0_IRQHandler,     //	EXTI0_IRQHandler
 	IntDefaultHandler,    //	EXTI1_IRQHandler
-	EXTI2_IRQHandler,     //	EXTI2_IRQHandler
+	IntDefaultHandler,    //	EXTI2_IRQHandler
 	IntDefaultHandler,    //	EXTI3_IRQHandler
 	IntDefaultHandler,    //	EXTI4_IRQHandler
 	IntDefaultHandler,    //	DMA1_Channel1_IRQHandler
@@ -125,60 +125,6 @@ void (* const g_pfnVectors[])(void) =
 	IntDefaultHandler,    //	EXTI15_10_IRQHandler
 	IntDefaultHandler,    //	RTCAlarm_IRQHandler
 	IntDefaultHandler,    //	USBWakeUp_IRQHandler	
-	IntDefaultHandler,    //    TIM8_BRK_IRQHandler
-	IntDefaultHandler,    //    TIM8_UP_IRQHandler
-	IntDefaultHandler,    //    TIM8_TRG_COM_IRQHandler
-	IntDefaultHandler,    //    TIM8_CC_IRQHandler
-	IntDefaultHandler,    //    ADC3_IRQHandler
-	IntDefaultHandler,    //    FSMC_IRQHandler
-	IntDefaultHandler,    //    SDIO_IRQHandler
-	IntDefaultHandler,    //    TIM5_IRQHandler
-	IntDefaultHandler,    //    SPI3_IRQHandler
-	IntDefaultHandler,    //    UART4_IRQHandler
-	IntDefaultHandler,    //    UART5_IRQHandler
-	IntDefaultHandler,    //    TIM6_IRQHandler
-	IntDefaultHandler,    //    TIM7_IRQHandler
-	IntDefaultHandler,    //    DMA2_Channel1_IRQHandler
-	IntDefaultHandler,    //    DMA2_Channel2_IRQHandler
-	IntDefaultHandler,    //    DMA2_Channel3_IRQHandler
-	IntDefaultHandler,    //    DMA2_Channel4_5_IRQHandler
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
-	0,
 	0,
 	0,
 	0,
