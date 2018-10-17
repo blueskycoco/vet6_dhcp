@@ -7,6 +7,8 @@
 #include "wizchip_conf.h"
 #include "dhcp.h"
 #include "socket.h"
+#include "ftpc.h"
+uint8_t ip_assigned = 0;
 extern void SWO_Enable();
 wiz_NetInfo gWIZNETINFO = {
 	.mac = {0x00, 0x08, 0xdc, 0xab, 0xcd, 0xef},
@@ -20,7 +22,7 @@ wiz_NetInfo gWIZNETINFO = {
 #define MY_MAX_DHCP_RETRY	2
 #define DATA_BUF_SIZE   2048
 uint8_t gDATABUF[DATA_BUF_SIZE];
-
+uint8_t gFTPBUF[DATA_BUF_SIZE];
 void EXTI9_5_IRQHandler(void)
 {
 	intr_kind source; 
@@ -179,6 +181,7 @@ void my_ip_assign(void)
 			gWIZNETINFO.dns[1],
 			gWIZNETINFO.dns[2],
 			gWIZNETINFO.dns[3]);
+	ip_assigned = 1;
 }
 void my_ip_conflict(void)
 {
@@ -242,7 +245,7 @@ void task()
 			case DHCP_IP_CHANGED:
 				break;
 			case DHCP_IP_LEASED:
-				//printf("IP got\r\n");
+				printf("IP got\r\n");
 				break;
 			case DHCP_FAILED:
 				my_dhcp_retry++;
@@ -265,6 +268,14 @@ void task()
 			DHCP_time_handler();
 		}
 		i++;
+		if (ip_assigned) {
+			printf("to start ftp\r\n");
+			ip_assigned = 0;
+			ftpc_init(gWIZNETINFO.ip);
+			while (1) {
+				ftpc_run(gFTPBUF);
+			}
+		}
 	}
 }
 
