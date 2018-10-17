@@ -13,7 +13,7 @@ uint8_t gMenuStart = 0;
 uint8_t gDataSockReady = 0;
 uint8_t gDataPutGetStart = 0;
 static uint8_t gMsgBuf[20]={0,};
-
+uint8_t gSend_quit = 0;
 struct ftpc ftpc;
 struct Command Command;
 unsigned int crc_ori = 0;
@@ -292,6 +292,7 @@ uint8_t ftpc_run(uint8_t * dbuf)
 			printf("%d:Closed\r\n",CTRL_SOCK);
 			break;
 		case SOCK_CLOSED :
+#if 0
 			printf("%d:FTPStart\r\n",CTRL_SOCK);
 			if((ret=socket(CTRL_SOCK, Sn_MR_TCP, FTP_destport, 0x0)) != CTRL_SOCK){
 				printf("%d:socket() error:%ld\r\n", CTRL_SOCK, ret);
@@ -299,6 +300,11 @@ uint8_t ftpc_run(uint8_t * dbuf)
 				return ret;
 			}
 			break;
+#else
+			crc_ori = 0;
+			close(CTRL_SOCK);
+			return 101;
+#endif
 		case SOCK_INIT :
 			printf("%d:Opened\r\n",CTRL_SOCK);
 			if((ret = connect(CTRL_SOCK, FTP_destip, FTP_destport)) != SOCK_OK){
@@ -448,7 +454,7 @@ uint8_t ftpc_run(uint8_t * dbuf)
 							}else{
 								if(getSn_SR(DATA_SOCK) != SOCK_ESTABLISHED) {
 									printf("total file len %d %04x\r\n", data_len, crc_ori);
-									crc_ori = 0;
+									gSend_quit = 1;
 									break;
 								}
 							}
@@ -469,6 +475,7 @@ uint8_t ftpc_run(uint8_t * dbuf)
 			printf("%d:Closed\r\n",DATA_SOCK);
 			break;
 		case SOCK_CLOSED :
+			if (crc_ori == 0) {
 			if(ftpc.dsock_state == DATASOCK_READY){
 				if(ftpc.dsock_mode == PASSIVE_MODE){
 					printf("%d:FTPDataStart, port : %d\r\n",DATA_SOCK, local_port);
@@ -492,6 +499,15 @@ uint8_t ftpc_run(uint8_t * dbuf)
 						local_port = 35000;
 				}
 				ftpc.dsock_state = DATASOCK_START;
+			} 
+			} else {
+				if (gSend_quit) {
+				gSend_quit = 0;
+				close(DATA_SOCK);
+				sprintf(dat,"QUIT\r\n");
+				printf("send quit to ftp server\r\n");
+				send(CTRL_SOCK, (uint8_t *)dat, strlen(dat));
+				}
 			}
 			break;
 

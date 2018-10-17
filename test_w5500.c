@@ -273,7 +273,8 @@ void task()
 			ip_assigned = 0;
 			ftpc_init(gWIZNETINFO.ip);
 			while (1) {
-				ftpc_run(gFTPBUF);
+				if (ftpc_run(gFTPBUF) == 101)
+					break;
 			}
 		}
 	}
