@@ -11,7 +11,7 @@ extern "C" {
 #include <string.h>
 #include <limits.h>
 #include <stdarg.h>
-#include "stdio_private.h"
+//#include "stdio_private.h"
 #include "socket.h"
 
 #define F_APP_FTPC
@@ -115,7 +115,7 @@ typedef union _un_l2cval {
 #endif
 
 void ftpc_init(uint8_t * src_ip);
-uint8_t ftpc_run(uint8_t * dbuf);
+uint8_t ftpc_run(uint8_t * dbuf, uint8_t *dest_ip, uint16_t dest_port, uint8_t *path);
 char proc_ftpc(char * buf);
 int pportc(char * arg);
 uint8_t* User_Keyboard_MSG();
