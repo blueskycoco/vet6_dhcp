@@ -8,6 +8,7 @@
 #include "dhcp.h"
 #include "socket.h"
 extern void SWO_Enable();
+extern uint8_t ip_assigned;
 wiz_NetInfo gWIZNETINFO = {
 	.mac = {0x00, 0x08, 0xdc, 0xab, 0xcd, 0xef},
 	.ip = {192, 168, 1, 2},
@@ -17,9 +18,10 @@ wiz_NetInfo gWIZNETINFO = {
 	.dhcp = NETINFO_DHCP 
 };
 #define SOCK_DHCP       	6
-#define MY_MAX_DHCP_RETRY	2
+#define SOCK_TASK			1
 #define DATA_BUF_SIZE   2048
 uint8_t gDATABUF[DATA_BUF_SIZE];
+uint8_t cmd[] = {0xad,0xac,0x00,0x26,0x01,0x00,0x01,0x00,0x00,0xa1,0x18,0x08,0x10,0x00,0x09,0x13,0x51,0x56,0x42,0x48,0x42,0x4c,0x08,0x66,0x85,0x60,0x31,0x97,0x56,0x81,0x28,0x37,0x41,0x33,0x19,0x01,0xed,0x60};
 
 void EXTI2_IRQHandler(void)
 {
@@ -148,35 +150,96 @@ static uint8_t PHYStatus_Check(void)
 	//printf("tmp %x\r\n", tmp);
 	return (tmp == PHY_LINK_OFF) ? 0 : 1;
 }
-void my_ip_assign(void)
+
+int32_t loopback_tcpc(uint8_t sn, uint8_t* buf, uint8_t* destip, uint16_t destport)
 {
-	getIPfromDHCP(gWIZNETINFO.ip);
-	getGWfromDHCP(gWIZNETINFO.gw);
-	getSNfromDHCP(gWIZNETINFO.sn);
-	getDNSfromDHCP(gWIZNETINFO.dns);
-	gWIZNETINFO.dhcp = NETINFO_DHCP;
-	ctlnetwork(CN_SET_NETINFO, (void*) &gWIZNETINFO);
-	printf("ip assigned\r\n");
-	printf("ip %d.%d.%d.%d\r\n",
-			gWIZNETINFO.ip[0],
-			gWIZNETINFO.ip[1],
-			gWIZNETINFO.ip[2],
-			gWIZNETINFO.ip[3]);
-	printf("gw %d.%d.%d.%d\r\n",
-			gWIZNETINFO.gw[0],
-			gWIZNETINFO.gw[1],
-			gWIZNETINFO.gw[2],
-			gWIZNETINFO.gw[3]);
-	printf("dns %d.%d.%d.%d\r\n",
-			gWIZNETINFO.dns[0],
-			gWIZNETINFO.dns[1],
-			gWIZNETINFO.dns[2],
-			gWIZNETINFO.dns[3]);
+   int32_t ret;
+   uint16_t size = 0, sentsize=0;
+
+   static uint16_t any_port = 	50000;
+
+   switch(getSn_SR(sn))
+   {
+      case SOCK_ESTABLISHED :
+         if(getSn_IR(sn) & Sn_IR_CON)
+         {
+#ifdef _LOOPBACK_DEBUG_
+			printf("%d:Connected to - %d.%d.%d.%d : %d\r\n",sn, destip[0], destip[1], destip[2], destip[3], destport);
+#endif
+			setSn_IR(sn, Sn_IR_CON);  // this interrupt should be write the bit cleared to '1'
+         }
+
+		 if((size = getSn_RX_RSR(sn)) > 0) // Sn_RX_RSR: Socket n Received Size Register, Receiving data length
+         {
+			if(size > DATA_BUF_SIZE) size = DATA_BUF_SIZE; // DATA_BUF_SIZE means user defined buffer size (array)
+			ret = recv(sn, buf, size); // Data Receive process (H/W Rx socket buffer -> User's buffer)
+			if(ret <= 0) return ret; // If the received data length <= 0, receive failed and process end
+			size = (uint16_t) ret;
+			sentsize = 0;
+			for (int i=0; i<ret; i++)
+				printf("%02x ",buf[i]);
+			printf("\r\n");
+#if 0
+			// Data sentsize control
+			while(size != sentsize)
+			{
+				ret = send(sn, buf+sentsize, size-sentsize); // Data send process (User's buffer -> Destination through H/W Tx socket buffer)
+				if(ret < 0) // Send Error occurred (sent data length < 0)
+				{
+					close(sn); // socket close
+					return ret;
+				}
+				sentsize += ret; // Don't care SOCKERR_BUSY, because it is zero.
+			}
+#endif
+         } else {
+         	 ret = send(sn, cmd, sizeof(cmd));
+         	 if (ret < 0) {
+         	 	 close(sn);
+         	 	 return ret;
+			 }
+
+		 }
+		 //////////////////////////////////////////////////////////////////////////////////////////////
+         break;
+
+      case SOCK_CLOSE_WAIT :
+#ifdef _LOOPBACK_DEBUG_
+         printf("%d:CloseWait\r\n",sn);
+#endif
+         if((ret=disconnect(sn)) != SOCK_OK) return ret;
+#ifdef _LOOPBACK_DEBUG_
+         printf("%d:Socket Closed\r\n", sn);
+#endif
+         break;
+
+      case SOCK_INIT :
+#ifdef _LOOPBACK_DEBUG_
+    	 printf("%d:Try to connect to the %d.%d.%d.%d : %d\r\n", sn, destip[0], destip[1], destip[2], destip[3], destport);
+#endif
+    	 if( (ret = connect(sn, destip, destport)) != SOCK_OK) return ret;	//	Try to TCP connect to the TCP server (destination)
+         break;
+
+      case SOCK_CLOSED:
+      	 printf("%d:Sock Closed\r\n", sn);
+    	  close(sn);
+    	  if((ret=socket(sn, Sn_MR_TCP, any_port++, 0x00)) != sn){
+          	if(any_port == 0xffff) 
+          		any_port = 50000;
+          return ret; // TCP socket open with 'any_port' port number
+        } 
+#ifdef _LOOPBACK_DEBUG_
+    	 //printf("%d:TCP client loopback start\r\n",sn);
+         //printf("%d:Socket opened\r\n",sn);
+#endif
+         break;
+      default:
+      	 printf("default \r\n");
+         break;
+   }
+   return 1;
 }
-void my_ip_conflict(void)
-{
-	printf("CONFLICT IP from DHCP\r\n");
-}
+
 void w5500_init()
 {
 	uint8_t memsize[2][8] = { { 2, 2, 2, 2, 2, 2, 2, 2 }, { 2, 2, 2, 2, 2, 2, 2, 2 } };
@@ -214,9 +277,12 @@ void w5500_init()
 }
 void task()
 {
-	uint8_t my_dhcp_retry = 0;
-	uint8_t dhcp_state = 0;
-	uint32_t i = 0;
+	uint8_t  task_ip[] = {106,14,116,201};
+	uint16_t task_port = 1704;
+	uint8_t dest_ip[] = {47,93,48,167};
+	uint16_t dest_port = 1721;
+	uint8_t *path = "/A1/21/stm32.bin";
+	uint8_t ftpstart = 0;
 	w5500_init();
 	while (1) {
 		if (!PHYStatus_Check()) {
@@ -224,39 +290,16 @@ void task()
 			delay_ms(1000);
 			continue;
 		}
-
-		//printf("hi\r\n");
-		dhcp_state = DHCP_run();
-		//printf("dhcp state %d\r\n", dhcp_state);
-		switch(dhcp_state)
-		{
-			case DHCP_IP_ASSIGN:
-			case DHCP_IP_CHANGED:
-				break;
-			case DHCP_IP_LEASED:
-				//printf("IP got\r\n");
-				break;
-			case DHCP_FAILED:
-				my_dhcp_retry++;
-				if(my_dhcp_retry > MY_MAX_DHCP_RETRY)
-				{
-					gWIZNETINFO.dhcp = NETINFO_STATIC;
-					DHCP_stop();
-					printf(">> DHCP %d Failed\r\n", my_dhcp_retry);
-					ctlnetwork(CN_SET_NETINFO, (void*) &gWIZNETINFO);
-					my_dhcp_retry = 0;
-				}
-				break;
-			default:
-				break;
+		dhcp_handler();
+		if (ip_assigned) {
+			loopback_tcpc(SOCK_TASK, gDATABUF, task_ip, task_port);
+			delay_ms(5000);
+			if (ftpstart == 0) {
+				printf("to start ftp\r\n");
+				ftpstart = 1;
+				printf("ftp result %d\r\n", ftpc_run(gDATABUF, dest_ip, dest_port, path));
+			}
 		}
-
-		delay_ms(1);
-		if (i>1000) {
-			i=0;
-			DHCP_time_handler();
-		}
-		i++;
 	}
 }
 

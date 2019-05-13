@@ -67,6 +67,7 @@ ${COMPILER}/w5500.axf: ${COMPILER}/mymisc.o
 ${COMPILER}/w5500.axf: ${COMPILER}/w5500.o
 ${COMPILER}/w5500.axf: ${COMPILER}/dhcp.o
 ${COMPILER}/w5500.axf: ${COMPILER}/socket.o
+${COMPILER}/w5500.axf: ${COMPILER}/ftpc.o
 ${COMPILER}/w5500.axf: ${COMPILER}/wizchip_conf.o
 ${COMPILER}/w5500.axf: ${ROOT}/driverlib/${COMPILER}/libdriver.a
 ${COMPILER}/w5500.axf: w5500.ld

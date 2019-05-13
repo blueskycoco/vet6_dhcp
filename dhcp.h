@@ -152,7 +152,9 @@ void getDNSfromDHCP(uint8_t* ip);
  * @retrun unit 1s
  */
 uint32_t getDHCPLeasetime(void);
-
+void dhcp_handler(void);
+void my_ip_assign(void);
+void my_ip_conflict(void);
 #ifdef __cplusplus
 }
 #endif
